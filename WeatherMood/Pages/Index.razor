@@ -1,0 +1,56 @@
+@page "/"
+@using WeatherMood.Data
+@using WeatherMood.Models
+@inject AppDbContext Db
+
+<h3>Weather Mood Tracker</h3>
+
+<div class="weather-display">
+    Current Weather: @currentWeather
+</div>
+
+<div class="mood-selector">
+    <button @onclick="() => LogMood('😊')">😊 Happy</button>
+    <button @onclick="() => LogMood('😐')">😐 Neutral</button>
+    <button @onclick="() => LogMood('😞')">😞 Sad</button>
+</div>
+
+@if (moodHistory.Any())
+{
+    <h4>Your Mood History</h4>
+    <ul>
+        @foreach (var record in moodHistory)
+        {
+            <li>@record.Date.ToShortDateString(): @record.Mood (@record.Weather)</li>
+        }
+    </ul>
+}
+
+@code {
+    private string currentWeather = "☀️"; // Default sunny
+    private List<MoodRecord> moodHistory = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Simulate weather changes
+        var weatherOptions = new[] { "☀️", "🌧️", "⛅", "❄️" };
+        currentWeather = weatherOptions[Random.Shared.Next(weatherOptions.Length)];
+        
+        // Load existing records
+        moodHistory = await Db.MoodRecords.OrderByDescending(m => m.Date).ToListAsync();
+    }
+
+    private async Task LogMood(string mood)
+    {
+        var newRecord = new MoodRecord
+        {
+            Mood = mood,
+            Weather = currentWeather,
+            Date = DateTime.Now
+        };
+
+        Db.MoodRecords.Add(newRecord);
+        await Db.SaveChangesAsync();
+        moodHistory.Insert(0, newRecord); // Add to top of list
+    }
+}
